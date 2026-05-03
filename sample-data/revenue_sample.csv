@@ -1,0 +1,11 @@
+date,region,segment,product,revenue,orders,cost
+2026-01-05,North America,Enterprise,Platform,42000,14,18300
+2026-01-12,North America,Mid-market,Platform,18500,22,9100
+2026-01-18,Europe,Enterprise,Insights,31000,11,13900
+2026-02-02,Europe,Mid-market,Platform,22000,25,10800
+2026-02-11,Asia Pacific,Enterprise,Insights,27000,9,12150
+2026-02-20,North America,Enterprise,Insights,48000,16,20600
+2026-03-03,Europe,Enterprise,Platform,36500,13,16400
+2026-03-14,Asia Pacific,Mid-market,Platform,14500,18,7100
+2026-03-21,North America,Mid-market,Insights,20500,20,9700
+2026-03-28,Europe,Mid-market,Insights,17800,17,8300
