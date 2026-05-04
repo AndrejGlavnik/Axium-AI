@@ -49,3 +49,31 @@ export type GroupByResult = {
   operation: GroupByOperation;
   rows: Array<Record<string, string | number>>;
 };
+
+export type TotalsResult = {
+  rows: Array<{
+    metric: string;
+    count: number;
+    total: number;
+    average: number;
+  }>;
+};
+
+export type PeriodComparisonResult = {
+  dateColumn: string;
+  metric: string;
+  currentPeriod: {
+    start: string;
+    end: string;
+    total: number;
+    count: number;
+  };
+  previousPeriod: {
+    start: string;
+    end: string;
+    total: number;
+    count: number;
+  };
+  difference: number;
+  percentChange: number | null;
+};

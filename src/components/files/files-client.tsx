@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { FileUp, RefreshCcw, Sparkles } from "lucide-react";
+import { CalendarRange, Columns3, FileUp, RefreshCcw, Sigma, Sparkles } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
@@ -99,6 +99,32 @@ export function FilesClient() {
     setSummaryMarkdown(response.ok ? payload.markdown : payload.error || "Could not summarize dataset.");
   }
 
+  async function runDatasetAction(fileId: string, endpoint: "columns" | "totals" | "compare-periods") {
+    if (!activeWorkspace) {
+      return;
+    }
+
+    const labels = {
+      columns: "Loading columns...",
+      totals: "Calculating totals...",
+      "compare-periods": "Comparing periods..."
+    };
+
+    setSummaryMarkdown(labels[endpoint]);
+    const response = await fetch(`/api/analytics/${endpoint}`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        workspace_id: activeWorkspace.id,
+        file_id: fileId
+      })
+    });
+    const payload = await response.json();
+    setSummaryMarkdown(response.ok ? payload.markdown : payload.error || "Could not run dataset analysis.");
+  }
+
   if (!activeWorkspace) {
     return (
       <EmptyState title="No active workspace">
@@ -155,16 +181,16 @@ export function FilesClient() {
         </EmptyState>
       ) : (
         <div className="overflow-hidden rounded-xl border border-line bg-white shadow-sm">
-          <div className="grid grid-cols-[1.5fr_0.7fr_0.6fr_0.7fr] gap-4 border-b border-line bg-panel px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
+          <div className="grid grid-cols-[1.2fr_0.45fr_0.45fr_1.1fr] gap-4 border-b border-line bg-panel px-4 py-3 text-xs font-semibold uppercase tracking-wide text-slate-500">
             <span>Name</span>
             <span>Size</span>
             <span>Status</span>
-            <span>Schema</span>
+            <span>Actions</span>
           </div>
           {files.map((file) => (
             <div
               key={file.id}
-              className="grid grid-cols-[1.5fr_0.7fr_0.6fr_0.7fr] items-center gap-4 border-b border-line px-4 py-4 text-sm last:border-b-0"
+              className="grid grid-cols-[1.2fr_0.45fr_0.45fr_1.1fr] items-center gap-4 border-b border-line px-4 py-4 text-sm last:border-b-0"
             >
               <div className="min-w-0">
                 <div className="truncate font-medium text-primary">{file.file_name}</div>
@@ -176,13 +202,36 @@ export function FilesClient() {
               </span>
               <div>
                 {file.file_schemas?.length ? (
-                  <button
-                    onClick={() => summarize(file.id)}
-                    className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary"
-                  >
-                    <Sparkles className="h-3.5 w-3.5" />
-                    Summarize
-                  </button>
+                  <div className="flex flex-wrap gap-2">
+                    <button
+                      onClick={() => summarize(file.id)}
+                      className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary"
+                    >
+                      <Sparkles className="h-3.5 w-3.5" />
+                      Summary
+                    </button>
+                    <button
+                      onClick={() => runDatasetAction(file.id, "columns")}
+                      className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary"
+                    >
+                      <Columns3 className="h-3.5 w-3.5" />
+                      Columns
+                    </button>
+                    <button
+                      onClick={() => runDatasetAction(file.id, "totals")}
+                      className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary"
+                    >
+                      <Sigma className="h-3.5 w-3.5" />
+                      Totals
+                    </button>
+                    <button
+                      onClick={() => runDatasetAction(file.id, "compare-periods")}
+                      className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary"
+                    >
+                      <CalendarRange className="h-3.5 w-3.5" />
+                      Periods
+                    </button>
+                  </div>
                 ) : (
                   <span className="text-xs text-slate-500">Document</span>
                 )}

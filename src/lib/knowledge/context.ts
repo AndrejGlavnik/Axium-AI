@@ -16,7 +16,11 @@ export type AxiumKnowledgeContext = {
   };
 };
 
-export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId: string): Promise<AxiumKnowledgeContext> {
+export async function buildAxiumKnowledgeContext(
+  admin: AdminClient,
+  workspaceId: string,
+  question = ""
+): Promise<AxiumKnowledgeContext> {
   const [files, schemas, entries, assets, metrics, fields, relationships, rules] = await Promise.all([
     admin
       .from("files")
@@ -73,19 +77,27 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     throw new Error(errors[0]?.message ?? "Could not load Axium Knowledge context.");
   }
 
-  const fileNameById = new Map((files.data ?? []).map((file) => [file.id, file.file_name]));
+  const fileRows = sortByQuestion(files.data ?? [], question);
+  const schemaRows = sortByQuestion(schemas.data ?? [], question);
+  const entryRows = sortByQuestion(entries.data ?? [], question);
+  const assetRows = sortByQuestion(assets.data ?? [], question);
+  const metricRows = sortByQuestion(metrics.data ?? [], question);
+  const fieldRows = sortByQuestion(fields.data ?? [], question);
+  const relationshipRows = sortByQuestion(relationships.data ?? [], question);
+  const ruleRows = sortByQuestion(rules.data ?? [], question);
+  const fileNameById = new Map(fileRows.map((file) => [file.id, file.file_name]));
 
   const lines = [
     "Axium Knowledge workspace context:",
     "",
     "Uploaded files:",
     listOrNone(
-      (files.data ?? []).map((file) => `- ${file.file_name} (${file.file_type}; status: ${file.status})`)
+      fileRows.map((file) => `- ${file.file_name} (${file.file_type}; status: ${file.status})`)
     ),
     "",
     "Detected structured file schemas:",
     listOrNone(
-      (schemas.data ?? []).map((schema) => {
+      schemaRows.map((schema) => {
         const fileName = fileNameById.get(schema.file_id);
         return [
           `- ${fileName ?? schema.file_id}: ${schema.row_count} rows`,
@@ -99,7 +111,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Knowledge entries:",
     listOrNone(
-      (entries.data ?? []).map(
+      entryRows.map(
         (entry) =>
           `- ${entry.title} [${entry.type}; ${entry.status}; confidence ${entry.confidence_level}]: ${compact(
             entry.description
@@ -111,7 +123,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Data assets:",
     listOrNone(
-      (assets.data ?? []).map(
+      assetRows.map(
         (asset) =>
           `- ${asset.asset_name} [${asset.asset_type}; ${asset.source_platform}; ${asset.source_of_truth_level}; ${asset.status}]: ${compact(
             asset.description
@@ -121,7 +133,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Metric catalog:",
     listOrNone(
-      (metrics.data ?? []).map(
+      metricRows.map(
         (metric) =>
           `- ${metric.metric_name} [${metric.aggregation_type}; grain ${metric.grain}; ${metric.status}]: ${compact(
             metric.business_definition
@@ -131,7 +143,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Fields catalog:",
     listOrNone(
-      (fields.data ?? []).map(
+      fieldRows.map(
         (field) =>
           `- ${field.field_name} [${field.field_type}; join ${field.join_quality}; PII ${field.pii_level}; ${field.status}]: ${compact(
             field.description
@@ -141,7 +153,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Relationship map:",
     listOrNone(
-      (relationships.data ?? []).map(
+      relationshipRows.map(
         (relationship) =>
           `- ${relationship.from_type}:${relationship.from_id} ${relationship.relationship_type} ${relationship.to_type}:${relationship.to_id} [${relationship.confidence_level}; ${relationship.status}] ${compact(
             relationship.description
@@ -151,7 +163,7 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
     "",
     "Cross-reference rules:",
     listOrNone(
-      (rules.data ?? []).map(
+      ruleRows.map(
         (rule) =>
           `- ${rule.rule_name}: ${rule.join_field_primary} to ${rule.join_field_secondary} [${rule.join_type}; quality ${rule.join_quality}; ${rule.status}] Use case: ${compact(
             rule.use_case
@@ -163,12 +175,12 @@ export async function buildAxiumKnowledgeContext(admin: AdminClient, workspaceId
   return {
     prompt: lines.join("\n"),
     used: {
-      entries: (entries.data ?? []).map((entry) => entry.title),
-      assets: (assets.data ?? []).map((asset) => asset.asset_name),
-      metrics: (metrics.data ?? []).map((metric) => metric.metric_name),
-      fields: (fields.data ?? []).map((field) => field.field_name),
-      relationships: (relationships.data ?? []).map((relationship) => relationship.id),
-      rules: (rules.data ?? []).map((rule) => rule.rule_name)
+      entries: entryRows.map((entry) => entry.title),
+      assets: assetRows.map((asset) => asset.asset_name),
+      metrics: metricRows.map((metric) => metric.metric_name),
+      fields: fieldRows.map((field) => field.field_name),
+      relationships: relationshipRows.map((relationship) => relationship.id),
+      rules: ruleRows.map((rule) => rule.rule_name)
     }
   };
 }
@@ -182,4 +194,22 @@ function compact(value: string | null | undefined) {
     return "No description documented.";
   }
   return value.replace(/\s+/g, " ").slice(0, 900);
+}
+
+function sortByQuestion<T>(rows: T[], question: string): T[] {
+  const terms = question
+    .toLowerCase()
+    .split(/[^a-z0-9]+/)
+    .filter((term) => term.length > 2);
+
+  if (!terms.length) {
+    return rows;
+  }
+
+  return [...rows].sort((left, right) => scoreRow(right, terms) - scoreRow(left, terms));
+}
+
+function scoreRow(row: unknown, terms: string[]) {
+  const text = JSON.stringify(row).toLowerCase();
+  return terms.reduce((score, term) => score + (text.includes(term) ? 1 : 0), 0);
 }

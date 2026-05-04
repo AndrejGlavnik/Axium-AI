@@ -2,7 +2,18 @@ import "server-only";
 
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { ColumnSchema } from "@/lib/analytics/types";
-import { findColumnMention, renderGroupByMarkdown, renderSummaryMarkdown, summarizeDataset, groupByDataset } from "@/lib/analytics/engine";
+import {
+  calculateTotals,
+  comparePeriods,
+  findColumnMention,
+  groupByDataset,
+  renderColumnsMarkdown,
+  renderGroupByMarkdown,
+  renderPeriodComparisonMarkdown,
+  renderSummaryMarkdown,
+  renderTotalsMarkdown,
+  summarizeDataset
+} from "@/lib/analytics/engine";
 import { loadDatasetFromStorage } from "@/lib/analytics/server";
 
 type AdminClient = ReturnType<typeof createSupabaseAdminClient>;
@@ -49,6 +60,37 @@ export async function buildAnalyticsContext(admin: AdminClient, workspaceId: str
 
   if (!wantsAnalysis) {
     return sections.join("\n");
+  }
+
+  if (/columns?|fields?|schema/.test(lowerQuestion)) {
+    const schema = schemas[0];
+    if (schema) {
+      sections.push("Detected deterministic columns result:", renderColumnsMarkdown(schema.files?.file_name ?? "Dataset", schema.columns));
+      return sections.join("\n\n");
+    }
+  }
+
+  if (/(compare|period|previous|trend|change|changed)/.test(lowerQuestion)) {
+    try {
+      const { file, dataset } = await loadDatasetFromStorage(admin, workspaceId, schemas[0]?.file_id);
+      sections.push(
+        "Detected deterministic period comparison result:",
+        renderPeriodComparisonMarkdown(file.file_name, comparePeriods(dataset.rows, dataset.columns, {}))
+      );
+      return sections.join("\n\n");
+    } catch (error) {
+      sections.push(`A period comparison was requested, but the dataset could not be compared: ${formatError(error)}`);
+    }
+  }
+
+  if (/(total|sum|overall)/.test(lowerQuestion) && !/(group|breakdown|by )/.test(lowerQuestion)) {
+    try {
+      const { file, dataset } = await loadDatasetFromStorage(admin, workspaceId, schemas[0]?.file_id);
+      sections.push("Detected deterministic totals result:", renderTotalsMarkdown(file.file_name, calculateTotals(dataset.rows, dataset.columns)));
+      return sections.join("\n\n");
+    } catch (error) {
+      sections.push(`A totals analysis was requested, but the dataset could not be read: ${formatError(error)}`);
+    }
   }
 
   const groupCandidate = detectGroupByRequest(question, schemas);

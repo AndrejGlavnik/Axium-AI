@@ -2,7 +2,7 @@ import "server-only";
 
 import { NextResponse, type NextRequest } from "next/server";
 import type { z } from "zod";
-import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
+import { assertWorkspaceMember, assertWorkspaceWriter, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
@@ -72,7 +72,7 @@ export async function createWorkspaceRecord<TSchema extends z.ZodTypeAny>(
   try {
     const body = schema.parse(await request.json()) as z.infer<TSchema> & { workspace_id: string };
     const { admin, user } = await requireAuthenticatedUser();
-    await assertWorkspaceMember(admin, body.workspace_id, user.id);
+    await assertWorkspaceWriter(admin, body.workspace_id, user.id);
 
     const record = {
       ...body,
@@ -105,7 +105,7 @@ export async function updateWorkspaceRecord<TSchema extends z.ZodTypeAny>(
     const body = schema.parse(await request.json()) as Record<string, unknown>;
     const { admin, user } = await requireAuthenticatedUser();
     const existing = await findScopedRecord(admin, tableName, id);
-    await assertWorkspaceMember(admin, existing.workspace_id, user.id);
+    await assertWorkspaceWriter(admin, existing.workspace_id, user.id);
 
     const { data, error } = await admin
       .from(tableName)
@@ -133,7 +133,7 @@ export async function deleteWorkspaceRecord(request: NextRequest, context: Route
     const { id } = await context.params;
     const { admin, user } = await requireAuthenticatedUser();
     const existing = await findScopedRecord(admin, tableName, id);
-    await assertWorkspaceMember(admin, existing.workspace_id, user.id);
+    await assertWorkspaceWriter(admin, existing.workspace_id, user.id);
 
     const { error } = await admin.from(tableName).delete().eq("id", id).eq("workspace_id", existing.workspace_id);
 

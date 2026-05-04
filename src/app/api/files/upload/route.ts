@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { toFile } from "openai/uploads";
 import { ACCEPTED_FILE_EXTENSIONS, MAX_UPLOAD_BYTES, STORAGE_BUCKET } from "@/lib/constants";
-import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
+import { assertWorkspaceWriter, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import { ensureWorkspaceVectorStore } from "@/lib/openai/vector-store";
 import { getOpenAIClient, hasOpenAIConfig } from "@/lib/openai/client";
@@ -30,7 +30,7 @@ export async function POST(request: NextRequest) {
       throw new ApiError(400, "Unsupported file type.");
     }
 
-    await assertWorkspaceMember(admin, workspaceId, user.id);
+    await assertWorkspaceWriter(admin, workspaceId, user.id);
 
     const { data: workspace, error: workspaceError } = await admin
       .from("workspaces")

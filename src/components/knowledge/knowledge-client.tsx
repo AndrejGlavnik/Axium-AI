@@ -613,9 +613,11 @@ function SectionPanel({
           <h2 className="text-xl font-semibold text-primary">{config.label}</h2>
           <p className="mt-1 text-sm leading-6 text-slate-600">{config.description}</p>
           {sectionKey === "relationships" ? (
-            <p className="mt-2 text-xs text-slate-500">TODO: replace this list with a visual Axium mind map graph after the MVP.</p>
+            <p className="mt-2 text-xs text-slate-500">This is a simple MVP map view. TODO: add a draggable visual mind map graph later.</p>
           ) : null}
         </div>
+
+        {sectionKey === "relationships" ? <RelationshipMapPreview data={allData} /> : null}
 
         <div className="grid gap-3 rounded-xl border border-line bg-white p-4 shadow-sm lg:grid-cols-[1fr_auto]">
           <label className="relative block">
@@ -879,6 +881,47 @@ function Badge({ children, tone = "neutral" }: { children: string; tone?: "neutr
     <span className={`rounded-full px-3 py-1 text-xs font-semibold ${tone === "blue" ? "bg-[#E8F3FF] text-secondary" : "bg-panel text-slate-600"}`}>
       {formatLabel(children)}
     </span>
+  );
+}
+
+function RelationshipMapPreview({ data }: { data: KnowledgeState }) {
+  if (!data.relationships.length) {
+    return (
+      <section className="rounded-xl border border-line bg-white p-5 shadow-sm">
+        <h3 className="text-base font-semibold text-primary">Relationship map</h3>
+        <p className="mt-2 text-sm leading-6 text-slate-500">
+          Create relationships to see how Axium Knowledge items connect.
+        </p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="rounded-xl border border-line bg-white p-5 shadow-sm">
+      <h3 className="text-base font-semibold text-primary">Relationship map</h3>
+      <div className="mt-4 space-y-3">
+        {data.relationships.slice(0, 8).map((relationship) => (
+          <div key={relationship.id} className="grid gap-3 rounded-lg border border-line bg-panel p-3 text-sm md:grid-cols-[1fr_auto_1fr] md:items-center">
+            <MapNode label={getNodeLabel(relationship.from_type, relationship.from_id, data)} type={relationship.from_type} />
+            <div className="flex items-center justify-center">
+              <span className="rounded-full bg-[#E8F3FF] px-3 py-1 text-xs font-semibold text-secondary">
+                {formatLabel(relationship.relationship_type)}
+              </span>
+            </div>
+            <MapNode label={getNodeLabel(relationship.to_type, relationship.to_id, data)} type={relationship.to_type} />
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function MapNode({ label, type }: { label: string; type: RelationshipNodeType }) {
+  return (
+    <div className="min-w-0 rounded-lg border border-line bg-white px-3 py-2">
+      <p className="truncate font-semibold text-primary">{label}</p>
+      <p className="mt-1 text-xs text-slate-500">{formatLabel(type)}</p>
+    </div>
   );
 }
 

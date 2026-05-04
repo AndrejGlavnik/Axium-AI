@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
-import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
+import { assertWorkspaceWriter, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import { groupStoredDataset } from "@/lib/analytics/server";
 import { findColumn } from "@/lib/analytics/engine";
@@ -18,7 +18,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = groupBySchema.parse(await request.json());
     const { admin, user } = await requireAuthenticatedUser();
-    await assertWorkspaceMember(admin, body.workspace_id, user.id);
+    await assertWorkspaceWriter(admin, body.workspace_id, user.id);
 
     const loaded = await groupStoredDataset(
       admin,

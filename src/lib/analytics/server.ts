@@ -3,7 +3,17 @@ import "server-only";
 import type { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import { STORAGE_BUCKET } from "@/lib/constants";
 import { parseDataset } from "@/lib/analytics/parser";
-import { groupByDataset, renderGroupByMarkdown, renderSummaryMarkdown, summarizeDataset } from "@/lib/analytics/engine";
+import {
+  calculateTotals,
+  comparePeriods,
+  groupByDataset,
+  renderColumnsMarkdown,
+  renderGroupByMarkdown,
+  renderPeriodComparisonMarkdown,
+  renderSummaryMarkdown,
+  renderTotalsMarkdown,
+  summarizeDataset
+} from "@/lib/analytics/engine";
 import type { GroupByOperation, ParsedDataset } from "@/lib/analytics/types";
 import type { WorkspaceFile } from "@/types/database";
 
@@ -75,5 +85,53 @@ export async function groupStoredDataset(
     dataset,
     result,
     markdown: renderGroupByMarkdown(file.file_name, result)
+  };
+}
+
+export async function listStoredDatasetColumns(admin: AdminClient, workspaceId: string, fileId?: string | null) {
+  const { file, dataset } = await loadDatasetFromStorage(admin, workspaceId, fileId);
+  return {
+    file,
+    columns: dataset.columns,
+    markdown: renderColumnsMarkdown(file.file_name, dataset.columns)
+  };
+}
+
+export async function calculateStoredTotals(
+  admin: AdminClient,
+  workspaceId: string,
+  fileId: string | null,
+  metrics?: string[] | null
+) {
+  const { file, dataset } = await loadDatasetFromStorage(admin, workspaceId, fileId);
+  const result = calculateTotals(dataset.rows, dataset.columns, metrics);
+  return {
+    file,
+    dataset,
+    result,
+    markdown: renderTotalsMarkdown(file.file_name, result)
+  };
+}
+
+export async function compareStoredPeriods(
+  admin: AdminClient,
+  workspaceId: string,
+  fileId: string | null,
+  options: {
+    dateColumn?: string | null;
+    metric?: string | null;
+    currentStart?: string | null;
+    currentEnd?: string | null;
+    previousStart?: string | null;
+    previousEnd?: string | null;
+  }
+) {
+  const { file, dataset } = await loadDatasetFromStorage(admin, workspaceId, fileId);
+  const result = comparePeriods(dataset.rows, dataset.columns, options);
+  return {
+    file,
+    dataset,
+    result,
+    markdown: renderPeriodComparisonMarkdown(file.file_name, result)
   };
 }

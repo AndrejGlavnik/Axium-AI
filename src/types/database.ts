@@ -499,6 +499,13 @@ export type Database = {
         };
         Returns: boolean;
       };
+      is_workspace_writer: {
+        Args: {
+          target_workspace_id: string;
+          target_user_id: string;
+        };
+        Returns: boolean;
+      };
     };
     Enums: Record<string, never>;
     CompositeTypes: Record<string, never>;

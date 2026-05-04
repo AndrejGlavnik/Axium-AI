@@ -57,6 +57,7 @@ The assistant is instructed to use only the current workspace, separate confirme
 - Workspace-scoped file uploads to Supabase Storage.
 - CSV, XLSX, PDF, DOCX, TXT and JSON upload support.
 - Server-side schema detection for CSV, XLSX and JSON.
+- Dataset columns, totals and automatic period comparison for structured files.
 - Supabase Postgres metadata for files, schemas, chats, analysis runs and Axium Knowledge.
 - ChatGPT-style assistant UI with markdown output.
 - OpenAI Responses API integration with optional File Search/vector store attachment.
@@ -169,7 +170,10 @@ Chat:
 Analytics:
 
 - `POST /api/analytics/summarize`
+- `POST /api/analytics/columns`
+- `POST /api/analytics/totals`
 - `POST /api/analytics/group-by`
+- `POST /api/analytics/compare-periods`
 
 Axium Knowledge:
 

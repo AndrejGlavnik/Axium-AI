@@ -50,3 +50,12 @@ export async function assertWorkspaceMember(admin: AdminClient, workspaceId: str
 
   return data;
 }
+
+export async function assertWorkspaceWriter(admin: AdminClient, workspaceId: string, userId: string) {
+  const membership = await assertWorkspaceMember(admin, workspaceId, userId);
+  if (!["owner", "admin", "analyst"].includes(membership.role)) {
+    throw new ApiError(403, "You have read-only access to this workspace.");
+  }
+
+  return membership;
+}

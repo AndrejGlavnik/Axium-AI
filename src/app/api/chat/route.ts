@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { z } from "zod";
 import { ANALYST_SYSTEM_INSTRUCTION } from "@/lib/constants";
-import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
+import { assertWorkspaceWriter, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import { buildAnalyticsContext } from "@/lib/analytics/chat-context";
 import { buildAxiumKnowledgeContext, type AxiumKnowledgeContext } from "@/lib/knowledge/context";
@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
   try {
     const body = chatSchema.parse(await request.json());
     const { admin, user } = await requireAuthenticatedUser();
-    await assertWorkspaceMember(admin, body.workspace_id, user.id);
+    await assertWorkspaceWriter(admin, body.workspace_id, user.id);
 
     const { data: workspace, error: workspaceError } = await admin
       .from("workspaces")
@@ -75,7 +75,7 @@ export async function POST(request: NextRequest) {
     }
 
     const analyticsContext = await buildAnalyticsContext(admin, body.workspace_id, body.message);
-    const knowledgeContext = await buildAxiumKnowledgeContext(admin, body.workspace_id);
+    const knowledgeContext = await buildAxiumKnowledgeContext(admin, body.workspace_id, body.message);
     const input = buildPrompt({
       workspaceName: workspace.name,
       knowledgeContext: knowledgeContext.prompt,
