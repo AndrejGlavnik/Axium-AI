@@ -54,6 +54,7 @@ The assistant is instructed to use only the current workspace, separate confirme
 - Supabase email authentication.
 - Protected dashboard routes.
 - Workspace creation and active workspace selection.
+- Workspace-scoped Connections page for Datorama, Databox, GA4, BigQuery, Google Sheets, API and manual sources.
 - Workspace-scoped file uploads to Supabase Storage.
 - CSV, XLSX, PDF, DOCX, TXT and JSON upload support.
 - Server-side schema detection for CSV, XLSX and JSON.
@@ -63,6 +64,7 @@ The assistant is instructed to use only the current workspace, separate confirme
 - OpenAI Responses API integration with optional File Search/vector store attachment.
 - Basic analytics endpoints for dataset summaries and group-by tables.
 - Axium Knowledge CRUD UI with search, filters, detail view and status/confidence badges.
+- Connection credentials are submitted only to server routes and encrypted when `CONNECTION_ENCRYPTION_KEY` is configured.
 - RLS-enabled Supabase migrations and server-side membership checks.
 
 ## Local Setup
@@ -87,6 +89,7 @@ NEXT_PUBLIC_SUPABASE_URL=
 NEXT_PUBLIC_SUPABASE_ANON_KEY=
 SUPABASE_SERVICE_ROLE_KEY=
 OPENAI_API_KEY=
+CONNECTION_ENCRYPTION_KEY=
 NEXT_PUBLIC_APP_URL=http://localhost:3000
 ```
 
@@ -203,10 +206,19 @@ Axium Knowledge:
 - `PATCH /api/knowledge/cross-reference-rules/:id`
 - `DELETE /api/knowledge/cross-reference-rules/:id`
 
+Connections:
+
+- `GET /api/connections?workspace_id=...`
+- `POST /api/connections/create`
+- `PATCH /api/connections/:id`
+- `DELETE /api/connections/:id`
+- `POST /api/connections/:id/test`
+
 ## Security Notes
 
 - OpenAI API key is never exposed to client components.
 - Supabase service role key is never exposed to client components.
+- Connection credentials are never returned to the browser. They are encrypted server-side with `CONNECTION_ENCRYPTION_KEY`.
 - Every API route verifies the Supabase user session.
 - Every workspace route checks membership in `workspace_members`.
 - Every tenant-scoped query filters by `workspace_id`.

@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, BookOpenText, Files, MessageSquareText, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenText, Files, MessageSquareText, PlugZap, UsersRound } from "lucide-react";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
 import { EmptyState } from "@/components/dashboard/empty-state";
 
@@ -17,6 +17,12 @@ const cards = [
     copy: "Chat with Axium using files, schemas and Axium Knowledge.",
     href: "/dashboard/chat",
     icon: MessageSquareText
+  },
+  {
+    title: "Connect sources",
+    copy: "Document Datorama, Databox, GA4, BigQuery, Sheets and API connections.",
+    href: "/dashboard/connections",
+    icon: PlugZap
   },
   {
     title: "Build Axium Knowledge",
@@ -51,7 +57,7 @@ export function OverviewClient() {
         </EmptyState>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-5">
         {cards.map((card) => (
           <Link key={card.href} href={card.href} className="rounded-xl border border-line bg-white p-6 shadow-sm transition hover:shadow-soft">
             <card.icon className="h-6 w-6 text-secondary" />

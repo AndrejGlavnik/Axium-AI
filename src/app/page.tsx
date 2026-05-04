@@ -1,11 +1,16 @@
 import Link from "next/link";
-import { ArrowRight, BarChart3, BookOpenText, FileText, LockKeyhole, MessageSquareText } from "lucide-react";
+import { ArrowRight, BarChart3, BookOpenText, FileText, LockKeyhole, MessageSquareText, PlugZap } from "lucide-react";
 
 const features = [
   {
     icon: BookOpenText,
     title: "Map Axium Knowledge",
     copy: "Document data assets, metric definitions, fields, dashboard logic, known issues and safe cross-references."
+  },
+  {
+    icon: PlugZap,
+    title: "Track connections",
+    copy: "Document Datorama, Databox, GA4, BigQuery, Sheets and API sources in one workspace inventory."
   },
   {
     icon: FileText,
@@ -131,7 +136,7 @@ export default function HomePage() {
         </div>
       </section>
 
-      <section className="mx-auto grid max-w-7xl gap-4 px-6 py-14 md:grid-cols-2 xl:grid-cols-4">
+      <section className="mx-auto grid max-w-7xl gap-4 px-6 py-14 md:grid-cols-2 xl:grid-cols-5">
         {features.map((feature) => (
           <div key={feature.title} className="rounded-xl border border-line bg-white p-6 shadow-sm">
             <feature.icon className="h-6 w-6 text-secondary" />

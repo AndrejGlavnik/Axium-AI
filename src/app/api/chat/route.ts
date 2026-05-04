@@ -198,7 +198,8 @@ function appendSources(answer: string, sources: Array<{ file_name?: string; file
     ...knowledgeContext.used.assets.slice(0, 8).map((item) => `- Asset: ${item}`),
     ...knowledgeContext.used.metrics.slice(0, 8).map((item) => `- Metric: ${item}`),
     ...knowledgeContext.used.fields.slice(0, 8).map((item) => `- Field: ${item}`),
-    ...knowledgeContext.used.rules.slice(0, 8).map((item) => `- Rule: ${item}`)
+    ...knowledgeContext.used.rules.slice(0, 8).map((item) => `- Rule: ${item}`),
+    ...knowledgeContext.used.connections.slice(0, 8).map((item) => `- Connection: ${item}`)
   ];
   const fileLines = sources.map((source) => `- ${source.file_name || source.file_id || "Workspace file"}`);
 

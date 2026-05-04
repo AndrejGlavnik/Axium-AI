@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, BookOpenText, Files, Home, LogOut, MessageSquareText, Settings } from "lucide-react";
+import { BarChart3, BookOpenText, Files, Home, LogOut, MessageSquareText, PlugZap, Settings } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 
 const navItems = [
   { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/dashboard/files", label: "Files", icon: Files },
+  { href: "/dashboard/connections", label: "Connections", icon: PlugZap },
   { href: "/dashboard/chat", label: "Chat", icon: MessageSquareText },
   { href: "/dashboard/knowledge", label: "Axium Knowledge", icon: BookOpenText },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }

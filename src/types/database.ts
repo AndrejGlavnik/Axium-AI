@@ -1,4 +1,11 @@
 import type {
+  ConnectionAuthType,
+  ConnectionProvider,
+  ConnectionStatus,
+  ConnectionType,
+  SyncFrequency
+} from "@/lib/connections/constants";
+import type {
   AggregationType,
   CatalogStatus,
   ConfidenceLevel,
@@ -489,6 +496,90 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["cross_reference_rules"]["Insert"]>;
         Relationships: [];
       };
+      connections: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          name: string;
+          provider: ConnectionProvider;
+          connection_type: ConnectionType;
+          auth_type: ConnectionAuthType;
+          status: ConnectionStatus;
+          base_url: string | null;
+          account_identifier: string | null;
+          documentation_url: string | null;
+          description: string | null;
+          owner: string | null;
+          sync_frequency: SyncFrequency;
+          scopes: string[];
+          linked_asset_ids: string[];
+          has_credentials: boolean;
+          last_sync_at: string | null;
+          last_tested_at: string | null;
+          notes: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          name: string;
+          provider?: ConnectionProvider;
+          connection_type?: ConnectionType;
+          auth_type?: ConnectionAuthType;
+          status?: ConnectionStatus;
+          base_url?: string | null;
+          account_identifier?: string | null;
+          documentation_url?: string | null;
+          description?: string | null;
+          owner?: string | null;
+          sync_frequency?: SyncFrequency;
+          scopes?: string[];
+          linked_asset_ids?: string[];
+          has_credentials?: boolean;
+          last_sync_at?: string | null;
+          last_tested_at?: string | null;
+          notes?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["connections"]["Insert"]>;
+        Relationships: [];
+      };
+      connection_secrets: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          connection_id: string;
+          created_by: string;
+          secret_label: string;
+          secret_hint: string | null;
+          encrypted_payload: string;
+          secret_iv: string;
+          secret_tag: string;
+          metadata: Json;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          connection_id: string;
+          created_by: string;
+          secret_label?: string;
+          secret_hint?: string | null;
+          encrypted_payload: string;
+          secret_iv: string;
+          secret_tag: string;
+          metadata?: Json;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["connection_secrets"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -524,3 +615,4 @@ export type MetricCatalogItem = Database["public"]["Tables"]["metrics_catalog"][
 export type FieldCatalogItem = Database["public"]["Tables"]["fields_catalog"]["Row"];
 export type KnowledgeRelationship = Database["public"]["Tables"]["knowledge_relationships"]["Row"];
 export type CrossReferenceRule = Database["public"]["Tables"]["cross_reference_rules"]["Row"];
+export type Connection = Database["public"]["Tables"]["connections"]["Row"];

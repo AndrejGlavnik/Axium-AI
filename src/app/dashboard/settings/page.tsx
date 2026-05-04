@@ -15,6 +15,7 @@ export default function SettingsPage() {
             "NEXT_PUBLIC_SUPABASE_ANON_KEY",
             "SUPABASE_SERVICE_ROLE_KEY",
             "OPENAI_API_KEY",
+            "CONNECTION_ENCRYPTION_KEY",
             "NEXT_PUBLIC_APP_URL"
           ].map((item) => (
             <div key={item} className="rounded-lg border border-line bg-panel px-4 py-3 font-mono text-sm text-slate-700">
