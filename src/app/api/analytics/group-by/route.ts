@@ -4,6 +4,7 @@ import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth"
 import { apiError, ApiError } from "@/lib/api/errors";
 import { groupStoredDataset } from "@/lib/analytics/server";
 import { findColumn } from "@/lib/analytics/engine";
+import type { Json } from "@/types/database";
 
 const groupBySchema = z.object({
   workspace_id: z.string().uuid(),
@@ -39,10 +40,15 @@ export async function POST(request: NextRequest) {
 
     await admin.from("analysis_runs").insert({
       workspace_id: body.workspace_id,
+      user_id: user.id,
+      question: `Group ${loaded.file.file_name} by ${body.group_by}`,
+      files_used: [{ id: loaded.file.id, file_name: loaded.file.file_name }] as unknown as Json,
+      knowledge_used: [] as unknown as Json,
+      output_type: "group_by_table",
       file_id: loaded.file.id,
       run_type: "group_by",
-      parameters: body,
-      result: loaded.result,
+      parameters: body as unknown as Json,
+      result: loaded.result as unknown as Json,
       created_by: user.id
     });
 

@@ -14,7 +14,9 @@ export async function GET(request: NextRequest) {
 
     const { data, error } = await admin
       .from("files")
-      .select("*, file_schemas(id,row_count,columns,sample_rows,created_at)")
+      .select(
+        "*, file_schemas(id,row_count,columns,detected_columns,detected_date_columns,detected_metric_columns,detected_dimension_columns,sample_rows,created_at,updated_at)"
+      )
       .eq("workspace_id", workspaceId)
       .order("created_at", { ascending: false });
 

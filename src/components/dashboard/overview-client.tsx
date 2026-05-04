@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { ArrowRight, Files, MessageSquareText, UsersRound } from "lucide-react";
+import { ArrowRight, BookOpenText, Files, MessageSquareText, UsersRound } from "lucide-react";
 import { useWorkspace } from "@/components/workspace/workspace-provider";
 import { EmptyState } from "@/components/dashboard/empty-state";
 
@@ -14,9 +14,15 @@ const cards = [
   },
   {
     title: "Ask questions",
-    copy: "Chat with the AI analyst using workspace knowledge.",
+    copy: "Chat with Axium using files, schemas and Axium Knowledge.",
     href: "/dashboard/chat",
     icon: MessageSquareText
+  },
+  {
+    title: "Build Axium Knowledge",
+    copy: "Document assets, metrics, fields, relationships and cross-reference rules.",
+    href: "/dashboard/knowledge",
+    icon: BookOpenText
   },
   {
     title: "Manage workspaces",
@@ -33,7 +39,7 @@ export function OverviewClient() {
     <div className="space-y-6">
       <div>
         <p className="text-sm font-medium text-secondary">Dashboard</p>
-        <h1 className="mt-1 text-3xl font-semibold text-primary">Analytics workspace</h1>
+        <h1 className="mt-1 text-3xl font-semibold text-primary">Axium workspace</h1>
         <p className="mt-2 text-sm text-slate-600">
           {activeWorkspace ? `Active workspace: ${activeWorkspace.name}` : "Create a workspace to begin."}
         </p>
@@ -45,7 +51,7 @@ export function OverviewClient() {
         </EmptyState>
       ) : null}
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
         {cards.map((card) => (
           <Link key={card.href} href={card.href} className="rounded-xl border border-line bg-white p-6 shadow-sm transition hover:shadow-soft">
             <card.icon className="h-6 w-6 text-secondary" />

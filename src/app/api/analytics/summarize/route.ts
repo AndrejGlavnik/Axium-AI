@@ -3,6 +3,7 @@ import { z } from "zod";
 import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import { summarizeStoredDataset } from "@/lib/analytics/server";
+import type { Json } from "@/types/database";
 
 const summarizeSchema = z.object({
   workspace_id: z.string().uuid(),
@@ -19,10 +20,15 @@ export async function POST(request: NextRequest) {
 
     await admin.from("analysis_runs").insert({
       workspace_id: body.workspace_id,
+      user_id: user.id,
+      question: "Summarize dataset",
+      files_used: [{ id: result.file.id, file_name: result.file.file_name }] as unknown as Json,
+      knowledge_used: [] as unknown as Json,
+      output_type: "dataset_summary",
       file_id: result.file.id,
       run_type: "summarize",
-      parameters: body,
-      result: result.summary,
+      parameters: body as unknown as Json,
+      result: result.summary as unknown as Json,
       created_by: user.id
     });
 

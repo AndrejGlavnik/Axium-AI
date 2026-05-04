@@ -1,6 +1,25 @@
+import type {
+  AggregationType,
+  CatalogStatus,
+  ConfidenceLevel,
+  CrossReferenceJoinType,
+  DataAssetStatus,
+  DataAssetType,
+  FieldType,
+  JoinQuality,
+  KnowledgeEntryStatus,
+  KnowledgeEntryType,
+  MetricGrain,
+  PiiLevel,
+  RelationshipNodeType,
+  RelationshipType,
+  SourceOfTruthLevel,
+  SourcePlatform
+} from "@/lib/knowledge/constants";
+
 export type Json = string | number | boolean | null | { [key: string]: Json | undefined } | Json[];
 
-export type WorkspaceRole = "owner" | "admin" | "member";
+export type WorkspaceRole = "owner" | "admin" | "analyst" | "viewer";
 export type ChatRole = "user" | "assistant" | "system";
 export type FileStatus = "stored" | "indexing" | "ready" | "failed" | "openai_skipped";
 
@@ -83,6 +102,7 @@ export type Database = {
           vector_store_id: string | null;
           status: FileStatus;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
@@ -96,11 +116,13 @@ export type Database = {
           vector_store_id?: string | null;
           status?: FileStatus;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           openai_file_id?: string | null;
           vector_store_id?: string | null;
           status?: FileStatus;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -110,23 +132,38 @@ export type Database = {
           file_id: string;
           workspace_id: string;
           columns: Json;
+          detected_columns: string[];
+          detected_date_columns: string[];
+          detected_metric_columns: string[];
+          detected_dimension_columns: string[];
           row_count: number;
           sample_rows: Json;
           created_at: string;
+          updated_at: string;
         };
         Insert: {
           id?: string;
           file_id: string;
           workspace_id: string;
-          columns: Json;
-          row_count: number;
+          columns?: Json;
+          detected_columns?: string[];
+          detected_date_columns?: string[];
+          detected_metric_columns?: string[];
+          detected_dimension_columns?: string[];
+          row_count?: number;
           sample_rows?: Json;
           created_at?: string;
+          updated_at?: string;
         };
         Update: {
           columns?: Json;
+          detected_columns?: string[];
+          detected_date_columns?: string[];
+          detected_metric_columns?: string[];
+          detected_dimension_columns?: string[];
           row_count?: number;
           sample_rows?: Json;
+          updated_at?: string;
         };
         Relationships: [];
       };
@@ -134,6 +171,7 @@ export type Database = {
         Row: {
           id: string;
           workspace_id: string;
+          user_id: string;
           created_by: string;
           title: string;
           created_at: string;
@@ -142,7 +180,8 @@ export type Database = {
         Insert: {
           id?: string;
           workspace_id: string;
-          created_by: string;
+          user_id?: string;
+          created_by?: string;
           title: string;
           created_at?: string;
           updated_at?: string;
@@ -182,24 +221,272 @@ export type Database = {
         Row: {
           id: string;
           workspace_id: string;
+          user_id: string | null;
+          question: string | null;
+          files_used: Json;
+          knowledge_used: Json;
+          output_type: string | null;
           file_id: string | null;
-          run_type: string;
+          run_type: string | null;
           parameters: Json;
           result: Json;
-          created_by: string;
+          created_by: string | null;
           created_at: string;
         };
         Insert: {
           id?: string;
           workspace_id: string;
+          user_id?: string | null;
+          question?: string | null;
+          files_used?: Json;
+          knowledge_used?: Json;
+          output_type?: string | null;
           file_id?: string | null;
-          run_type: string;
+          run_type?: string | null;
           parameters?: Json;
           result?: Json;
-          created_by: string;
+          created_by?: string | null;
           created_at?: string;
         };
         Update: Record<string, never>;
+        Relationships: [];
+      };
+      knowledge_entries: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          title: string;
+          type: KnowledgeEntryType;
+          description: string;
+          affected_system: string | null;
+          affected_dashboard: string | null;
+          affected_metric: string | null;
+          affected_date_start: string | null;
+          affected_date_end: string | null;
+          root_cause: string | null;
+          business_impact: string | null;
+          recommended_action: string | null;
+          status: KnowledgeEntryStatus;
+          confidence_level: ConfidenceLevel;
+          tags: string[];
+          source_file_id: string | null;
+          source_url: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          title: string;
+          type?: KnowledgeEntryType;
+          description: string;
+          affected_system?: string | null;
+          affected_dashboard?: string | null;
+          affected_metric?: string | null;
+          affected_date_start?: string | null;
+          affected_date_end?: string | null;
+          root_cause?: string | null;
+          business_impact?: string | null;
+          recommended_action?: string | null;
+          status?: KnowledgeEntryStatus;
+          confidence_level?: ConfidenceLevel;
+          tags?: string[];
+          source_file_id?: string | null;
+          source_url?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["knowledge_entries"]["Insert"]>;
+        Relationships: [];
+      };
+      data_assets: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          asset_name: string;
+          asset_type: DataAssetType;
+          source_platform: SourcePlatform;
+          description: string | null;
+          owner: string | null;
+          refresh_frequency: string | null;
+          refresh_method: string | null;
+          source_of_truth_level: SourceOfTruthLevel;
+          status: DataAssetStatus;
+          known_limitations: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          asset_name: string;
+          asset_type?: DataAssetType;
+          source_platform?: SourcePlatform;
+          description?: string | null;
+          owner?: string | null;
+          refresh_frequency?: string | null;
+          refresh_method?: string | null;
+          source_of_truth_level?: SourceOfTruthLevel;
+          status?: DataAssetStatus;
+          known_limitations?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["data_assets"]["Insert"]>;
+        Relationships: [];
+      };
+      metrics_catalog: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          metric_name: string;
+          business_definition: string;
+          technical_definition: string | null;
+          formula: string | null;
+          source_asset_id: string | null;
+          source_field_name: string | null;
+          aggregation_type: AggregationType;
+          grain: MetricGrain;
+          owner: string | null;
+          status: CatalogStatus;
+          known_issues: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          metric_name: string;
+          business_definition: string;
+          technical_definition?: string | null;
+          formula?: string | null;
+          source_asset_id?: string | null;
+          source_field_name?: string | null;
+          aggregation_type?: AggregationType;
+          grain?: MetricGrain;
+          owner?: string | null;
+          status?: CatalogStatus;
+          known_issues?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["metrics_catalog"]["Insert"]>;
+        Relationships: [];
+      };
+      fields_catalog: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          field_name: string;
+          field_type: FieldType;
+          source_asset_id: string | null;
+          description: string | null;
+          example_values: string[];
+          can_be_used_for_join: boolean;
+          join_quality: JoinQuality;
+          pii_level: PiiLevel;
+          status: CatalogStatus;
+          known_issues: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          field_name: string;
+          field_type?: FieldType;
+          source_asset_id?: string | null;
+          description?: string | null;
+          example_values?: string[];
+          can_be_used_for_join?: boolean;
+          join_quality?: JoinQuality;
+          pii_level?: PiiLevel;
+          status?: CatalogStatus;
+          known_issues?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["fields_catalog"]["Insert"]>;
+        Relationships: [];
+      };
+      knowledge_relationships: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          from_type: RelationshipNodeType;
+          from_id: string;
+          to_type: RelationshipNodeType;
+          to_id: string;
+          relationship_type: RelationshipType;
+          description: string | null;
+          confidence_level: ConfidenceLevel;
+          status: CatalogStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          from_type: RelationshipNodeType;
+          from_id: string;
+          to_type: RelationshipNodeType;
+          to_id: string;
+          relationship_type?: RelationshipType;
+          description?: string | null;
+          confidence_level?: ConfidenceLevel;
+          status?: CatalogStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["knowledge_relationships"]["Insert"]>;
+        Relationships: [];
+      };
+      cross_reference_rules: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          created_by: string;
+          rule_name: string;
+          primary_asset_id: string;
+          secondary_asset_id: string;
+          join_field_primary: string;
+          join_field_secondary: string;
+          join_type: CrossReferenceJoinType;
+          join_quality: JoinQuality;
+          use_case: string | null;
+          warning: string | null;
+          status: CatalogStatus;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          created_by: string;
+          rule_name: string;
+          primary_asset_id: string;
+          secondary_asset_id: string;
+          join_field_primary: string;
+          join_field_secondary: string;
+          join_type?: CrossReferenceJoinType;
+          join_quality?: JoinQuality;
+          use_case?: string | null;
+          warning?: string | null;
+          status?: CatalogStatus;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["cross_reference_rules"]["Insert"]>;
         Relationships: [];
       };
     };
@@ -224,3 +511,9 @@ export type WorkspaceFile = Database["public"]["Tables"]["files"]["Row"];
 export type FileSchema = Database["public"]["Tables"]["file_schemas"]["Row"];
 export type ChatThread = Database["public"]["Tables"]["chat_threads"]["Row"];
 export type ChatMessage = Database["public"]["Tables"]["chat_messages"]["Row"];
+export type KnowledgeEntry = Database["public"]["Tables"]["knowledge_entries"]["Row"];
+export type DataAsset = Database["public"]["Tables"]["data_assets"]["Row"];
+export type MetricCatalogItem = Database["public"]["Tables"]["metrics_catalog"]["Row"];
+export type FieldCatalogItem = Database["public"]["Tables"]["fields_catalog"]["Row"];
+export type KnowledgeRelationship = Database["public"]["Tables"]["knowledge_relationships"]["Row"];
+export type CrossReferenceRule = Database["public"]["Tables"]["cross_reference_rules"]["Row"];

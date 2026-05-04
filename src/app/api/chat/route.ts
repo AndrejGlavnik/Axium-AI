@@ -4,8 +4,10 @@ import { ANALYST_SYSTEM_INSTRUCTION } from "@/lib/constants";
 import { assertWorkspaceMember, requireAuthenticatedUser } from "@/lib/api/auth";
 import { apiError, ApiError } from "@/lib/api/errors";
 import { buildAnalyticsContext } from "@/lib/analytics/chat-context";
+import { buildAxiumKnowledgeContext, type AxiumKnowledgeContext } from "@/lib/knowledge/context";
 import { getAnalystModel, getOpenAIClient } from "@/lib/openai/client";
 import { extractFileSearchSources, extractResponseText } from "@/lib/openai/responses";
+import type { Json } from "@/types/database";
 
 const chatSchema = z.object({
   workspace_id: z.string().uuid(),
@@ -36,6 +38,7 @@ export async function POST(request: NextRequest) {
         .from("chat_threads")
         .insert({
           workspace_id: body.workspace_id,
+          user_id: user.id,
           created_by: user.id,
           title
         })
@@ -72,8 +75,10 @@ export async function POST(request: NextRequest) {
     }
 
     const analyticsContext = await buildAnalyticsContext(admin, body.workspace_id, body.message);
+    const knowledgeContext = await buildAxiumKnowledgeContext(admin, body.workspace_id);
     const input = buildPrompt({
       workspaceName: workspace.name,
+      knowledgeContext: knowledgeContext.prompt,
       analyticsContext,
       history: history ?? [],
       question: body.message
@@ -107,8 +112,11 @@ export async function POST(request: NextRequest) {
         workspace_id: body.workspace_id,
         thread_id: threadId,
         role: "assistant",
-        content: appendSources(answer, sources),
-        sources
+        content: appendSources(answer, sources, knowledgeContext),
+        sources: {
+          file_search: sources,
+          axium_knowledge: knowledgeContext.used
+        } as unknown as Json
       })
       .select("*")
       .single();
@@ -122,6 +130,19 @@ export async function POST(request: NextRequest) {
       .update({ updated_at: new Date().toISOString() })
       .eq("workspace_id", body.workspace_id)
       .eq("id", threadId);
+
+    await admin.from("analysis_runs").insert({
+      workspace_id: body.workspace_id,
+      user_id: user.id,
+      created_by: user.id,
+      question: body.message,
+      files_used: sources as unknown as Json,
+      knowledge_used: knowledgeContext.used as unknown as Json,
+      output_type: "chat_answer",
+      run_type: "chat",
+      parameters: { thread_id: threadId } as unknown as Json,
+      result: { answer: assistantMessage.content } as unknown as Json
+    });
 
     return NextResponse.json({
       thread_id: threadId,
@@ -137,11 +158,13 @@ export async function POST(request: NextRequest) {
 
 function buildPrompt({
   workspaceName,
+  knowledgeContext,
   analyticsContext,
   history,
   question
 }: {
   workspaceName: string;
+  knowledgeContext: string;
   analyticsContext: string;
   history: Array<{ role: string; content: string }>;
   question: string;
@@ -154,6 +177,8 @@ function buildPrompt({
   return [
     `Workspace: ${workspaceName}`,
     "Use only the current workspace context below.",
+    "Axium Knowledge context:",
+    knowledgeContext,
     "Structured analytics context:",
     analyticsContext,
     "Recent conversation:",
@@ -163,11 +188,27 @@ function buildPrompt({
   ].join("\n\n");
 }
 
-function appendSources(answer: string, sources: Array<{ file_name?: string; file_id?: string }>) {
-  if (!sources.length || /sources used/i.test(answer)) {
+function appendSources(answer: string, sources: Array<{ file_name?: string; file_id?: string }>, knowledgeContext: AxiumKnowledgeContext) {
+  if (/files used/i.test(answer) && /knowledge used/i.test(answer)) {
     return answer;
   }
 
-  const lines = sources.map((source) => `- ${source.file_name || source.file_id || "Workspace file"}`);
-  return `${answer}\n\n## Sources used\n${lines.join("\n")}`;
+  const knowledgeLines = [
+    ...knowledgeContext.used.entries.slice(0, 8).map((item) => `- Entry: ${item}`),
+    ...knowledgeContext.used.assets.slice(0, 8).map((item) => `- Asset: ${item}`),
+    ...knowledgeContext.used.metrics.slice(0, 8).map((item) => `- Metric: ${item}`),
+    ...knowledgeContext.used.fields.slice(0, 8).map((item) => `- Field: ${item}`),
+    ...knowledgeContext.used.rules.slice(0, 8).map((item) => `- Rule: ${item}`)
+  ];
+  const fileLines = sources.map((source) => `- ${source.file_name || source.file_id || "Workspace file"}`);
+
+  const sections = [answer];
+  if (fileLines.length && !/files used/i.test(answer)) {
+    sections.push(`## Files used\n${fileLines.join("\n")}`);
+  }
+  if (knowledgeLines.length && !/knowledge used/i.test(answer)) {
+    sections.push(`## Axium Knowledge used\n${knowledgeLines.join("\n")}`);
+  }
+
+  return sections.join("\n\n");
 }

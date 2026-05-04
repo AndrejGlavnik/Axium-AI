@@ -149,7 +149,7 @@ export function ChatClient() {
       <section className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-line bg-white shadow-sm">
         <div className="border-b border-line px-5 py-4">
           <p className="text-sm font-medium text-secondary">{activeWorkspace.name}</p>
-          <h2 className="text-xl font-semibold text-primary">AI data analyst</h2>
+          <h2 className="text-xl font-semibold text-primary">Axium analytics agent</h2>
         </div>
 
         <div className="min-h-0 flex-1 space-y-5 overflow-y-auto bg-panel px-4 py-5">

@@ -103,10 +103,21 @@ export async function POST(request: NextRequest) {
 
     if (isStructuredFile(file.name, file.type)) {
       const parsed = await parseDataset(buffer, file.name);
+      const detectedColumns = parsed.columns.map((column) => column.name);
+      const detectedDateColumns = parsed.columns.filter((column) => column.type === "date").map((column) => column.name);
+      const detectedMetricColumns = parsed.columns.filter((column) => column.type === "number").map((column) => column.name);
+      const detectedDimensionColumns = parsed.columns
+        .filter((column) => column.type !== "number" && column.type !== "empty")
+        .map((column) => column.name);
+
       const { error: schemaError } = await admin.from("file_schemas").insert({
         file_id: savedFile.id,
         workspace_id: workspaceId,
         columns: parsed.columns as unknown as Json,
+        detected_columns: detectedColumns,
+        detected_date_columns: detectedDateColumns,
+        detected_metric_columns: detectedMetricColumns,
+        detected_dimension_columns: detectedDimensionColumns,
         row_count: parsed.rowCount,
         sample_rows: parsed.sampleRows as unknown as Json
       });

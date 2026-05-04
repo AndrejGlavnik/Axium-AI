@@ -11,7 +11,7 @@ export default function LoginPage() {
             <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-primary text-white">
               <BarChart3 className="h-5 w-5" />
             </div>
-            <span className="font-semibold text-primary">Analytics AI Platform</span>
+            <span className="font-semibold text-primary">Axium AI Analytics Platform</span>
           </Link>
           <h1 className="text-2xl font-semibold text-primary">Sign in</h1>
           <p className="mt-2 text-sm leading-6 text-slate-600">

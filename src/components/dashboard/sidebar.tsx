@@ -2,15 +2,15 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { BarChart3, Files, Home, LogOut, MessageSquareText, Settings, UsersRound } from "lucide-react";
+import { BarChart3, BookOpenText, Files, Home, LogOut, MessageSquareText, Settings } from "lucide-react";
 import { createSupabaseBrowserClient } from "@/lib/supabase/client";
 import { WorkspaceSwitcher } from "@/components/workspace/workspace-switcher";
 
 const navItems = [
-  { href: "/dashboard", label: "Overview", icon: Home },
-  { href: "/dashboard/workspaces", label: "Workspaces", icon: UsersRound },
+  { href: "/dashboard", label: "Dashboard", icon: Home },
   { href: "/dashboard/files", label: "Files", icon: Files },
   { href: "/dashboard/chat", label: "Chat", icon: MessageSquareText },
+  { href: "/dashboard/knowledge", label: "Axium Knowledge", icon: BookOpenText },
   { href: "/dashboard/settings", label: "Settings", icon: Settings }
 ];
 
@@ -32,8 +32,8 @@ export function Sidebar() {
           <BarChart3 className="h-5 w-5" />
         </div>
         <div>
-          <div className="text-sm font-semibold text-primary">Analytics AI</div>
-          <div className="text-xs text-slate-500">Platform</div>
+          <div className="text-sm font-semibold text-primary">Axium</div>
+          <div className="text-xs text-slate-500">AI Analytics</div>
         </div>
       </Link>
 
