@@ -1,6 +1,8 @@
 import type {
   ConnectionAuthType,
   ConnectionProvider,
+  ConnectionResourceStatus,
+  ConnectionResourceType,
   ConnectionStatus,
   ConnectionType,
   SyncFrequency
@@ -580,6 +582,44 @@ export type Database = {
         Update: Partial<Database["public"]["Tables"]["connection_secrets"]["Insert"]>;
         Relationships: [];
       };
+      connection_resources: {
+        Row: {
+          id: string;
+          workspace_id: string;
+          connection_id: string;
+          created_by: string;
+          resource_name: string;
+          resource_type: ConnectionResourceType;
+          external_id: string | null;
+          path: string | null;
+          description: string | null;
+          schema_summary: Json;
+          status: ConnectionResourceStatus;
+          linked_asset_id: string | null;
+          discovered_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          workspace_id: string;
+          connection_id: string;
+          created_by: string;
+          resource_name: string;
+          resource_type?: ConnectionResourceType;
+          external_id?: string | null;
+          path?: string | null;
+          description?: string | null;
+          schema_summary?: Json;
+          status?: ConnectionResourceStatus;
+          linked_asset_id?: string | null;
+          discovered_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: Partial<Database["public"]["Tables"]["connection_resources"]["Insert"]>;
+        Relationships: [];
+      };
     };
     Views: Record<string, never>;
     Functions: {
@@ -616,3 +656,4 @@ export type FieldCatalogItem = Database["public"]["Tables"]["fields_catalog"]["R
 export type KnowledgeRelationship = Database["public"]["Tables"]["knowledge_relationships"]["Row"];
 export type CrossReferenceRule = Database["public"]["Tables"]["cross_reference_rules"]["Row"];
 export type Connection = Database["public"]["Tables"]["connections"]["Row"];
+export type ConnectionResource = Database["public"]["Tables"]["connection_resources"]["Row"];

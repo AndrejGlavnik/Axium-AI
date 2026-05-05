@@ -2,6 +2,8 @@ import { z } from "zod";
 import {
   connectionAuthTypes,
   connectionProviders,
+  connectionResourceStatuses,
+  connectionResourceTypes,
   connectionStatuses,
   connectionTypes,
   syncFrequencies
@@ -62,3 +64,16 @@ export const connectionUpdateSchema = connectionCreateSchema.omit({ workspace_id
 export const connectionTestSchema = z.object({
   workspace_id: z.string().uuid().optional()
 });
+
+export const connectionResourceCreateSchema = z.object({
+  workspace_id: z.string().uuid(),
+  resource_name: z.string().trim().min(1).max(220),
+  resource_type: z.enum(connectionResourceTypes).default("other"),
+  external_id: optionalShortText,
+  path: optionalShortText,
+  description: optionalText,
+  status: z.enum(connectionResourceStatuses).default("active"),
+  linked_asset_id: z.preprocess((value) => (value === "" || value === undefined ? null : value), z.string().uuid().nullable().optional())
+});
+
+export const connectionResourceUpdateSchema = connectionResourceCreateSchema.partial();

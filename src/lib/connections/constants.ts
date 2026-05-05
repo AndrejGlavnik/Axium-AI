@@ -45,6 +45,24 @@ export const connectionStatuses = [
 
 export const syncFrequencies = ["manual", "hourly", "daily", "weekly", "monthly", "unknown"] as const;
 
+export const connectionResourceTypes = [
+  "account",
+  "property",
+  "dataset",
+  "table",
+  "dashboard",
+  "report",
+  "sheet",
+  "api_endpoint",
+  "file_export",
+  "metric",
+  "field",
+  "linked_asset",
+  "other"
+] as const;
+
+export const connectionResourceStatuses = ["active", "under_review", "unavailable", "deprecated", "archived"] as const;
+
 export const connectionTemplates = [
   {
     provider: "Datorama",
@@ -89,3 +107,5 @@ export type ConnectionType = (typeof connectionTypes)[number];
 export type ConnectionAuthType = (typeof connectionAuthTypes)[number];
 export type ConnectionStatus = (typeof connectionStatuses)[number];
 export type SyncFrequency = (typeof syncFrequencies)[number];
+export type ConnectionResourceType = (typeof connectionResourceTypes)[number];
+export type ConnectionResourceStatus = (typeof connectionResourceStatuses)[number];

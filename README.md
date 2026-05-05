@@ -55,6 +55,7 @@ The assistant is instructed to use only the current workspace, separate confirme
 - Protected dashboard routes.
 - Workspace creation and active workspace selection.
 - Workspace-scoped Connections page for Datorama, Databox, GA4, BigQuery, Google Sheets, API and manual sources.
+- Connection resource inventory for documented endpoints, account IDs, dashboards, reports, sheets, tables and linked Axium Knowledge assets.
 - Workspace-scoped file uploads to Supabase Storage.
 - CSV, XLSX, PDF, DOCX, TXT and JSON upload support.
 - Server-side schema detection for CSV, XLSX and JSON.
@@ -65,6 +66,7 @@ The assistant is instructed to use only the current workspace, separate confirme
 - Basic analytics endpoints for dataset summaries and group-by tables.
 - Axium Knowledge CRUD UI with search, filters, detail view and status/confidence badges.
 - Connection credentials are submitted only to server routes and encrypted when `CONNECTION_ENCRYPTION_KEY` is configured.
+- Live API tests are restricted to public HTTPS URLs and never return response bodies to the browser.
 - RLS-enabled Supabase migrations and server-side membership checks.
 
 ## Local Setup
@@ -213,6 +215,11 @@ Connections:
 - `PATCH /api/connections/:id`
 - `DELETE /api/connections/:id`
 - `POST /api/connections/:id/test`
+- `POST /api/connections/:id/discover`
+- `GET /api/connections/:id/resources?workspace_id=...`
+- `POST /api/connections/:id/resources/create`
+- `PATCH /api/connections/:id/resources/:resourceId`
+- `DELETE /api/connections/:id/resources/:resourceId`
 
 ## Security Notes
 

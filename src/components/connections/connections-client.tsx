@@ -6,7 +6,9 @@ import {
   DatabaseZap,
   KeyRound,
   Link2,
+  ListTree,
   Pencil,
+  PlusCircle,
   PlugZap,
   RefreshCcw,
   Save,
@@ -18,13 +20,15 @@ import { useWorkspace } from "@/components/workspace/workspace-provider";
 import {
   connectionAuthTypes,
   connectionProviders,
+  connectionResourceStatuses,
+  connectionResourceTypes,
   connectionStatuses,
   connectionTemplates,
   connectionTypes,
   syncFrequencies,
   type ConnectionProvider
 } from "@/lib/connections/constants";
-import type { Connection, DataAsset } from "@/types/database";
+import type { Connection, ConnectionResource, DataAsset } from "@/types/database";
 
 type ConnectionForm = {
   name: string;
@@ -43,6 +47,16 @@ type ConnectionForm = {
   notes: string;
   credential_label: string;
   credential_value: string;
+};
+
+type ResourceForm = {
+  resource_name: string;
+  resource_type: string;
+  external_id: string;
+  path: string;
+  description: string;
+  status: string;
+  linked_asset_id: string;
 };
 
 const initialForm: ConnectionForm = {
@@ -64,12 +78,26 @@ const initialForm: ConnectionForm = {
   credential_value: ""
 };
 
+const initialResourceForm: ResourceForm = {
+  resource_name: "",
+  resource_type: "dashboard",
+  external_id: "",
+  path: "",
+  description: "",
+  status: "active",
+  linked_asset_id: ""
+};
+
 export function ConnectionsClient() {
   const { activeWorkspace } = useWorkspace();
   const [connections, setConnections] = useState<Connection[]>([]);
+  const [resources, setResources] = useState<Record<string, ConnectionResource[]>>({});
   const [assets, setAssets] = useState<DataAsset[]>([]);
   const [form, setForm] = useState<ConnectionForm>(initialForm);
+  const [resourceForm, setResourceForm] = useState<ResourceForm>(initialResourceForm);
   const [editingId, setEditingId] = useState<string | null>(null);
+  const [resourceFormConnectionId, setResourceFormConnectionId] = useState<string | null>(null);
+  const [editingResourceId, setEditingResourceId] = useState<string | null>(null);
   const [selectedProvider, setSelectedProvider] = useState<ConnectionProvider>("API");
   const [message, setMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
@@ -79,9 +107,10 @@ export function ConnectionsClient() {
       { label: "Connected", value: connections.filter((item) => item.status === "connected").length },
       { label: "Needs credentials", value: connections.filter((item) => item.status === "needs_credentials").length },
       { label: "API connections", value: connections.filter((item) => item.connection_type === "api_key").length },
-      { label: "Linked assets", value: new Set(connections.flatMap((item) => item.linked_asset_ids)).size }
+      { label: "Linked assets", value: new Set(connections.flatMap((item) => item.linked_asset_ids)).size },
+      { label: "Resources mapped", value: Object.values(resources).reduce((count, items) => count + items.length, 0) }
     ];
-  }, [connections]);
+  }, [connections, resources]);
 
   async function loadConnections() {
     if (!activeWorkspace) {
@@ -100,7 +129,9 @@ export function ConnectionsClient() {
     const assetsPayload = await assetsResponse.json();
 
     if (connectionsResponse.ok) {
-      setConnections(connectionsPayload.connections ?? []);
+      const loadedConnections = (connectionsPayload.connections ?? []) as Connection[];
+      setConnections(loadedConnections);
+      await loadResources(loadedConnections);
     } else {
       setMessage(connectionsPayload.error || "Could not load connections.");
     }
@@ -110,6 +141,22 @@ export function ConnectionsClient() {
     }
 
     setIsLoading(false);
+  }
+
+  async function loadResources(loadedConnections: Connection[]) {
+    if (!activeWorkspace || !loadedConnections.length) {
+      setResources({});
+      return;
+    }
+
+    const pairs = await Promise.all(
+      loadedConnections.map(async (connection) => {
+        const response = await fetch(`/api/connections/${connection.id}/resources?workspace_id=${activeWorkspace.id}`);
+        const payload = await response.json();
+        return [connection.id, response.ok ? payload.resources ?? [] : []] as const;
+      })
+    );
+    setResources(Object.fromEntries(pairs));
   }
 
   useEffect(() => {
@@ -208,6 +255,84 @@ export function ConnectionsClient() {
     await loadConnections();
   }
 
+  async function discoverConnection(connection: Connection) {
+    const response = await fetch(`/api/connections/${connection.id}/discover`, { method: "POST" });
+    const body = await response.json();
+    if (!response.ok) {
+      setMessage(body.error || "Could not discover connection resources.");
+      return;
+    }
+    setMessage(body.notes || "Connection resources discovered.");
+    await loadConnections();
+  }
+
+  function startAddResource(connection: Connection) {
+    setResourceFormConnectionId(connection.id);
+    setEditingResourceId(null);
+    setResourceForm({
+      ...initialResourceForm,
+      resource_type: suggestedResourceType(connection.provider)
+    });
+  }
+
+  function startEditResource(connectionId: string, resource: ConnectionResource) {
+    setResourceFormConnectionId(connectionId);
+    setEditingResourceId(resource.id);
+    setResourceForm({
+      resource_name: resource.resource_name,
+      resource_type: resource.resource_type,
+      external_id: resource.external_id ?? "",
+      path: resource.path ?? "",
+      description: resource.description ?? "",
+      status: resource.status,
+      linked_asset_id: resource.linked_asset_id ?? ""
+    });
+  }
+
+  async function saveResource(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    if (!activeWorkspace || !resourceFormConnectionId) {
+      return;
+    }
+
+    const payload = {
+      workspace_id: activeWorkspace.id,
+      ...resourceForm,
+      linked_asset_id: resourceForm.linked_asset_id || null
+    };
+    const endpoint = editingResourceId
+      ? `/api/connections/${resourceFormConnectionId}/resources/${editingResourceId}`
+      : `/api/connections/${resourceFormConnectionId}/resources/create`;
+    const response = await fetch(endpoint, {
+      method: editingResourceId ? "PATCH" : "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    const body = await response.json();
+    if (!response.ok) {
+      setMessage(body.error || "Could not save connection resource.");
+      return;
+    }
+
+    setMessage(editingResourceId ? "Connection resource updated." : "Connection resource added.");
+    setResourceFormConnectionId(null);
+    setEditingResourceId(null);
+    setResourceForm(initialResourceForm);
+    await loadConnections();
+  }
+
+  async function deleteResource(connectionId: string, resourceId: string) {
+    const response = await fetch(`/api/connections/${connectionId}/resources/${resourceId}`, { method: "DELETE" });
+    const body = await response.json();
+    if (!response.ok) {
+      setMessage(body.error || "Could not delete connection resource.");
+      return;
+    }
+
+    setMessage("Connection resource deleted.");
+    await loadConnections();
+  }
+
   if (!activeWorkspace) {
     return (
       <EmptyState title="No active workspace">
@@ -235,7 +360,7 @@ export function ConnectionsClient() {
         </button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {stats.map((stat) => (
           <div key={stat.label} className="rounded-xl border border-line bg-white p-5 shadow-sm">
             <p className="text-sm font-medium text-slate-500">{stat.label}</p>
@@ -361,6 +486,27 @@ export function ConnectionsClient() {
                           ))}
                         </div>
                       ) : null}
+                      {resourceFormConnectionId === connection.id ? (
+                        <ResourceEditor
+                          assets={assets}
+                          form={resourceForm}
+                          isEditing={Boolean(editingResourceId)}
+                          onCancel={() => {
+                            setResourceFormConnectionId(null);
+                            setEditingResourceId(null);
+                            setResourceForm(initialResourceForm);
+                          }}
+                          onChange={setResourceFormValue}
+                          onSubmit={saveResource}
+                        />
+                      ) : null}
+                      <ConnectionResources
+                        assets={assets}
+                        connectionId={connection.id}
+                        resources={resources[connection.id] ?? []}
+                        onDelete={deleteResource}
+                        onEdit={startEditResource}
+                      />
                     </div>
                     <div className="flex flex-wrap gap-2">
                       <button onClick={() => testConnection(connection)} className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary">
@@ -370,6 +516,14 @@ export function ConnectionsClient() {
                       <button onClick={() => startEdit(connection)} className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary">
                         <Pencil className="h-3.5 w-3.5" />
                         Edit
+                      </button>
+                      <button onClick={() => discoverConnection(connection)} className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary">
+                        <ListTree className="h-3.5 w-3.5" />
+                        Discover
+                      </button>
+                      <button onClick={() => startAddResource(connection)} className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-primary transition hover:border-secondary">
+                        <PlusCircle className="h-3.5 w-3.5" />
+                        Add resource
                       </button>
                       <button onClick={() => deleteConnection(connection)} className="inline-flex items-center gap-2 rounded-lg border border-line bg-white px-3 py-2 text-xs font-semibold text-red-700 transition hover:border-red-300">
                         <Trash2 className="h-3.5 w-3.5" />
@@ -389,6 +543,105 @@ export function ConnectionsClient() {
   function setFormValue<K extends keyof ConnectionForm>(key: K, value: ConnectionForm[K]) {
     setForm((current) => ({ ...current, [key]: value }));
   }
+
+  function setResourceFormValue<K extends keyof ResourceForm>(key: K, value: ResourceForm[K]) {
+    setResourceForm((current) => ({ ...current, [key]: value }));
+  }
+}
+
+function ResourceEditor({
+  assets,
+  form,
+  isEditing,
+  onCancel,
+  onChange,
+  onSubmit
+}: {
+  assets: DataAsset[];
+  form: ResourceForm;
+  isEditing: boolean;
+  onCancel: () => void;
+  onChange: <K extends keyof ResourceForm>(key: K, value: ResourceForm[K]) => void;
+  onSubmit: (event: FormEvent<HTMLFormElement>) => void;
+}) {
+  return (
+    <form onSubmit={onSubmit} className="mt-4 rounded-lg border border-line bg-white p-3">
+      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <p className="text-sm font-semibold text-primary">{isEditing ? "Edit connected resource" : "Add connected resource"}</p>
+        <button type="button" onClick={onCancel} className="inline-flex items-center gap-2 rounded-lg border border-line px-3 py-2 text-xs font-semibold text-slate-600">
+          <XCircle className="h-3.5 w-3.5" />
+          Cancel
+        </button>
+      </div>
+      <div className="mt-3 grid gap-3 md:grid-cols-2">
+        <Input label="Resource name" value={form.resource_name} onChange={(value) => onChange("resource_name", value)} required />
+        <Select label="Resource type" value={form.resource_type} options={connectionResourceTypes} onChange={(value) => onChange("resource_type", value)} />
+        <Input label="External ID" value={form.external_id} onChange={(value) => onChange("external_id", value)} />
+        <Input label="Path or URL" value={form.path} onChange={(value) => onChange("path", value)} />
+        <Select label="Status" value={form.status} options={connectionResourceStatuses} onChange={(value) => onChange("status", value)} />
+        <SingleAssetSelect assets={assets} value={form.linked_asset_id} onChange={(value) => onChange("linked_asset_id", value)} />
+      </div>
+      <div className="mt-3">
+        <Textarea label="Description" value={form.description} onChange={(value) => onChange("description", value)} />
+      </div>
+      <button className="mt-3 inline-flex h-9 items-center justify-center gap-2 rounded-lg bg-primary px-4 text-xs font-semibold text-white transition hover:bg-[#001F5F]">
+        <Save className="h-3.5 w-3.5" />
+        {isEditing ? "Save resource" : "Add resource"}
+      </button>
+    </form>
+  );
+}
+
+function ConnectionResources({
+  assets,
+  connectionId,
+  resources,
+  onDelete,
+  onEdit
+}: {
+  assets: DataAsset[];
+  connectionId: string;
+  resources: ConnectionResource[];
+  onDelete: (connectionId: string, resourceId: string) => void;
+  onEdit: (connectionId: string, resource: ConnectionResource) => void;
+}) {
+  if (!resources.length) {
+    return (
+      <p className="mt-3 text-xs text-slate-500">
+        No resources mapped yet. Use Discover after adding a URL, account ID or linked Axium assets.
+      </p>
+    );
+  }
+
+  return (
+    <div className="mt-4 rounded-lg border border-line bg-white p-3">
+      <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">Mapped resources</p>
+      <div className="mt-3 grid gap-2 md:grid-cols-2">
+        {resources.map((resource) => (
+          <div key={resource.id} className="rounded-lg bg-panel px-3 py-2">
+            <div className="flex items-start justify-between gap-2">
+              <p className="truncate text-sm font-semibold text-primary">{resource.resource_name}</p>
+              <div className="flex shrink-0 gap-1">
+                <button onClick={() => onEdit(connectionId, resource)} className="rounded-md border border-line bg-white p-1 text-slate-500 transition hover:border-secondary hover:text-primary" aria-label={`Edit ${resource.resource_name}`}>
+                  <Pencil className="h-3.5 w-3.5" />
+                </button>
+                <button onClick={() => onDelete(connectionId, resource.id)} className="rounded-md border border-line bg-white p-1 text-red-700 transition hover:border-red-300" aria-label={`Delete ${resource.resource_name}`}>
+                  <Trash2 className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
+            <div className="mt-1 flex flex-wrap gap-2 text-xs text-slate-500">
+              <span>{formatLabel(resource.resource_type)}</span>
+              <span>{formatLabel(resource.status)}</span>
+              {resource.external_id ? <span>{resource.external_id}</span> : null}
+              {resource.linked_asset_id ? <span>{assetName(resource.linked_asset_id, assets)}</span> : null}
+            </div>
+            {resource.description ? <p className="mt-2 line-clamp-2 text-xs leading-5 text-slate-600">{resource.description}</p> : null}
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Input({
@@ -493,6 +746,34 @@ function AssetSelect({
   );
 }
 
+function SingleAssetSelect({
+  assets,
+  value,
+  onChange
+}: {
+  assets: DataAsset[];
+  value: string;
+  onChange: (value: string) => void;
+}) {
+  return (
+    <label className="block">
+      <span className="text-sm font-medium text-slate-700">Linked Axium asset</span>
+      <select
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1 w-full rounded-lg border border-line bg-white px-3 py-2 text-sm outline-none focus:border-secondary"
+      >
+        <option value="">None</option>
+        {assets.map((asset) => (
+          <option key={asset.id} value={asset.id}>
+            {asset.asset_name}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
 function StatusBadge({ status }: { status: string }) {
   const connected = status === "connected";
   return (
@@ -512,6 +793,25 @@ function Pill({ label, value }: { label: string; value: string }) {
 
 function assetName(assetId: string, assets: DataAsset[]) {
   return assets.find((asset) => asset.id === assetId)?.asset_name ?? assetId.slice(0, 8);
+}
+
+function suggestedResourceType(provider: ConnectionProvider) {
+  if (provider === "GA4") {
+    return "property";
+  }
+  if (provider === "BigQuery") {
+    return "dataset";
+  }
+  if (provider === "Google Sheets") {
+    return "sheet";
+  }
+  if (provider === "Datorama" || provider === "Databox") {
+    return "dashboard";
+  }
+  if (provider === "CSV" || provider === "Excel") {
+    return "file_export";
+  }
+  return "api_endpoint";
 }
 
 function formatLabel(value: string) {

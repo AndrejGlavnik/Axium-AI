@@ -22,7 +22,7 @@ export async function buildAxiumKnowledgeContext(
   workspaceId: string,
   question = ""
 ): Promise<AxiumKnowledgeContext> {
-  const [files, schemas, entries, assets, metrics, fields, relationships, rules, connections] = await Promise.all([
+  const [files, schemas, entries, assets, metrics, fields, relationships, rules, connections, connectionResources] = await Promise.all([
     admin
       .from("files")
       .select("id,file_name,file_type,status,created_at")
@@ -76,10 +76,27 @@ export async function buildAxiumKnowledgeContext(
       .select("id,name,provider,connection_type,auth_type,status,base_url,account_identifier,description,sync_frequency,scopes,linked_asset_ids,has_credentials,last_tested_at,updated_at")
       .eq("workspace_id", workspaceId)
       .order("updated_at", { ascending: false })
+      .limit(30),
+    admin
+      .from("connection_resources")
+      .select("id,connection_id,resource_name,resource_type,external_id,path,description,status,linked_asset_id,discovered_at,updated_at")
+      .eq("workspace_id", workspaceId)
+      .order("updated_at", { ascending: false })
       .limit(30)
   ]);
 
-  const errors = [files.error, schemas.error, entries.error, assets.error, metrics.error, fields.error, relationships.error, rules.error, connections.error].filter(Boolean);
+  const errors = [
+    files.error,
+    schemas.error,
+    entries.error,
+    assets.error,
+    metrics.error,
+    fields.error,
+    relationships.error,
+    rules.error,
+    connections.error,
+    connectionResources.error
+  ].filter(Boolean);
   if (errors.length) {
     throw new Error(errors[0]?.message ?? "Could not load Axium Knowledge context.");
   }
@@ -93,6 +110,7 @@ export async function buildAxiumKnowledgeContext(
   const relationshipRows = sortByQuestion(relationships.data ?? [], question);
   const ruleRows = sortByQuestion(rules.data ?? [], question);
   const connectionRows = sortByQuestion(connections.data ?? [], question);
+  const connectionResourceRows = sortByQuestion(connectionResources.data ?? [], question);
   const fileNameById = new Map(fileRows.map((file) => [file.id, file.file_name]));
 
   const lines = [
@@ -189,6 +207,16 @@ export async function buildAxiumKnowledgeContext(
             connection.has_credentials ? " Credentials are stored server-side." : " No credential stored."
           }`
       )
+    ),
+    "",
+    "Connection resources:",
+    listOrNone(
+      connectionResourceRows.map(
+        (resource) =>
+          `- ${resource.resource_name} [${resource.resource_type}; ${resource.status}]: ${compact(resource.description)}${
+            resource.external_id ? ` External id: ${resource.external_id}.` : ""
+          }${resource.path ? ` Path: ${resource.path}.` : ""}`
+      )
     )
   ];
 
@@ -201,7 +229,10 @@ export async function buildAxiumKnowledgeContext(
       fields: fieldRows.map((field) => field.field_name),
       relationships: relationshipRows.map((relationship) => relationship.id),
       rules: ruleRows.map((rule) => rule.rule_name),
-      connections: connectionRows.map((connection) => connection.name)
+      connections: [
+        ...connectionRows.map((connection) => connection.name),
+        ...connectionResourceRows.map((resource) => resource.resource_name)
+      ]
     }
   };
 }

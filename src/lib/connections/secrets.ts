@@ -25,6 +25,16 @@ export function encryptConnectionSecret(secret: string, hintSource?: string | nu
   };
 }
 
+export function decryptConnectionSecret(encrypted: EncryptedSecret) {
+  const key = getEncryptionKey();
+  const decipher = crypto.createDecipheriv("aes-256-gcm", key, Buffer.from(encrypted.secret_iv, "base64"));
+  decipher.setAuthTag(Buffer.from(encrypted.secret_tag, "base64"));
+  return Buffer.concat([
+    decipher.update(Buffer.from(encrypted.encrypted_payload, "base64")),
+    decipher.final()
+  ]).toString("utf8");
+}
+
 function getEncryptionKey() {
   const raw = process.env.CONNECTION_ENCRYPTION_KEY;
   if (!raw || raw.length < 32) {
